@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+axum = "0.8.4"
+bundles_rs = { git = "https://github.com/loadnetwork/bundles-rs.git", branch = "main"}
+dotenvy = "0.15.7"
+reqwest = { version = "0.12.23", features = ["json"] }
+aws-config = { version= "1.8.3", features = ["behavior-version-latest"] }
+aws-sdk-s3= { version = "1.100.0", features = ["rt-tokio"] }
+anyhow = "1.0.99"
+serde_json = "1.0.142"
