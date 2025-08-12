@@ -1960,6 +1960,7 @@ dependencies = [
  "bundles_rs",
  "dotenvy",
  "reqwest",
+ "serde",
  "serde_json",
 ]
 
