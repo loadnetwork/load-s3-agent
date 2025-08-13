@@ -1,4 +1,6 @@
-use crate::core::server::{OBJECT_SIZE_LIMIT, handle_route, serve_dataitem, upload_file};
+use crate::core::server::{
+    OBJECT_SIZE_LIMIT, SERVER_PORT, handle_route, serve_dataitem, upload_file,
+};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
@@ -23,7 +25,7 @@ async fn main() {
         .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))
         .layer(cors);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Server running on http://0.0.0.0:3000");
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{SERVER_PORT}")).await.unwrap();
+    println!("Server running on PORT: {SERVER_PORT}");
     axum::serve(listener, router).await.unwrap();
 }

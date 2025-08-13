@@ -13,11 +13,12 @@ use axum_extra::extract::Multipart;
 use headers::HeaderMap;
 use serde_json::{Value, json};
 
-pub use crate::core::utils::OBJECT_SIZE_LIMIT;
+pub use crate::core::utils::{OBJECT_SIZE_LIMIT, SERVER_PORT};
 
 pub async fn handle_route() -> Json<Value> {
     Json(serde_json::json!({
         "status": "running",
+        "name": "load-s3-agent",
         "version": env!("CARGO_PKG_VERSION"),
         "address": crate::core::utils::DATAITEMS_ADDRESS,
         "object_size_limit": crate::core::utils::OBJECT_SIZE_LIMIT,
