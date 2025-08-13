@@ -19,7 +19,10 @@ pub async fn handle_route() -> Json<Value> {
     Json(serde_json::json!({
         "status": "running",
         "version": env!("CARGO_PKG_VERSION"),
-        "address": crate::core::utils::DATAITEMS_ADDRESS
+        "address": crate::core::utils::DATAITEMS_ADDRESS,
+        "object_size_limit": crate::core::utils::OBJECT_SIZE_LIMIT,
+        "presigned_url_expiry": crate::core::utils::PRESIGNED_URL_EXPIRY,
+        "data_protocol": crate::core::utils::DATA_PROTOCOL_NAME
     }))
 }
 
