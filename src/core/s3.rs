@@ -1,4 +1,7 @@
-use crate::core::{ans104::create_dataitem, utils::get_env_var};
+use crate::core::{
+    ans104::create_dataitem,
+    utils::{PRESIGNED_URL_EXPIRY, get_env_var},
+};
 use anyhow::Error;
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::Client;
@@ -17,27 +20,62 @@ async fn s3_client() -> Result<Client, Error> {
         ))
         .load()
         .await;
-    Ok(Client::new(&config))
+
+    let s3_config = aws_sdk_s3::config::Builder::from(&config).force_path_style(true).build();
+    Ok(Client::from_conf(s3_config))
 }
 
 pub async fn store_dataitem(data: Vec<u8>, content_type: &str) -> Result<String, Error> {
     let s3_bucket_name = get_env_var("S3_BUCKET_NAME").unwrap();
     let s3_dir_name = get_env_var("S3_DIR_NAME").unwrap();
+    let s3_dir_name_raw = get_env_var("S3_RAW_DIR_NAME").unwrap();
 
     let client = s3_client().await?;
-    let dataitem = create_dataitem(data, content_type)?;
+    let dataitem = create_dataitem(data.clone(), content_type)?;
     let dataitem_id = dataitem.arweave_id();
 
-    let key: String = format!("{s3_bucket_name}/{s3_dir_name}/{dataitem_id}.ans104");
+    let key_dataitem: String = format!("{s3_dir_name}/{dataitem_id}.ans104");
+    let key_raw: String = format!("{s3_dir_name_raw}/{dataitem_id}");
 
+    // store it as ans-104 serialized dataitem
     client
         .put_object()
-        .bucket(s3_bucket_name)
-        .key(key)
+        .bucket(&s3_bucket_name)
+        .key(key_dataitem)
         .body(dataitem.to_bytes()?.into())
         .content_type("application/octet-stream")
         .send()
         .await?;
 
+    // store the dataitem raw body for fast retrievals
+
+    client
+        .put_object()
+        .bucket(s3_bucket_name)
+        .key(key_raw)
+        .body(data.into())
+        .content_type(content_type)
+        .send()
+        .await?;
+
     Ok(dataitem_id)
+}
+
+pub async fn get_dataitem_url(dataitem_id: &str) -> Result<String, Error> {
+    let client = s3_client().await?;
+    let s3_bucket_name = get_env_var("S3_BUCKET_NAME")?;
+    let s3_dir_name_raw = get_env_var("S3_RAW_DIR_NAME")?;
+
+    let key: String = format!("{s3_dir_name_raw}/{dataitem_id}");
+
+    let presigned_url = client
+        .get_object()
+        .bucket(s3_bucket_name)
+        .key(key)
+        .presigned(aws_sdk_s3::presigning::PresigningConfig::expires_in(
+            std::time::Duration::from_secs(PRESIGNED_URL_EXPIRY),
+        )?)
+        .await?;
+
+    Ok(presigned_url.uri().to_string())
 }
