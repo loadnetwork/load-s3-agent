@@ -141,6 +141,13 @@ pub async fn upload_file(
         )
     })?;
 
+    if file_bytes.len() > OBJECT_SIZE_LIMIT {
+        return Err((
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(json!({"error": format!("file size exceeds limit - {OBJECT_SIZE_LIMIT} bytes")})),
+        ));
+    }
+
     let content_type_str = content_type.as_deref().unwrap_or("application/octet-stream");
 
     match store_dataitem(file_bytes, content_type_str).await {
