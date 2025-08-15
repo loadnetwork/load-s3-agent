@@ -23,7 +23,8 @@ pub async fn handle_route() -> Json<Value> {
         "address": crate::core::utils::DATAITEMS_ADDRESS,
         "object_size_limit": crate::core::utils::OBJECT_SIZE_LIMIT,
         "presigned_url_expiry": crate::core::utils::PRESIGNED_URL_EXPIRY,
-        "data_protocol": crate::core::utils::DATA_PROTOCOL_NAME
+        "data_protocol": crate::core::utils::DATA_PROTOCOL_NAME,
+        "hyperbeam_node_url": crate::core::utils::HYPERBEAM_NODE_URL,
     }))
 }
 

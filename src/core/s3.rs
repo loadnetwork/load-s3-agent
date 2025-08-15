@@ -1,8 +1,8 @@
 use crate::core::{
     ans104::create_dataitem,
-    utils::{OBJECT_SIZE_LIMIT, PRESIGNED_URL_EXPIRY, get_env_var},
+    utils::{PRESIGNED_URL_EXPIRY, get_env_var},
 };
-use anyhow::{Error, anyhow};
+use anyhow::Error;
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::Client;
 

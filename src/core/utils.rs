@@ -10,6 +10,7 @@ pub const OBJECT_SIZE_LIMIT: usize = 250 * 1024 * 1024; // 250 MB
 // 108+111+97+100+45+115+51+45+97+103+101+110+116 = 1247
 // [^^]
 pub const SERVER_PORT: &str = "1247";
+pub const HYPERBEAM_NODE_URL: &str = "https://s3-node-0.load.network";
 
 pub(crate) fn get_env_var(key: &str) -> Result<String, Error> {
     dotenv().ok();
