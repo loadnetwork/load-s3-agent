@@ -6,6 +6,7 @@
 ## Agent API
 
 - GET `/` : agent info
+- GET `/stats` : storage stats
 - GET `/:dataitem_id` : generate a presigned get_object URL to access the ANS-104 DataItem data.
 - POST `/upload` : post data to store a DataItem offchain on `~s3@1.0`
 

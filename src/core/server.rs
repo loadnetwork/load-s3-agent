@@ -1,5 +1,5 @@
 use crate::core::{
-    s3::{get_dataitem_url, store_dataitem},
+    s3::{get_bucket_stats, get_dataitem_url, store_dataitem},
     utils::get_env_var,
 };
 use axum::{
@@ -25,6 +25,15 @@ pub async fn handle_route() -> Json<Value> {
         "presigned_url_expiry": crate::core::utils::PRESIGNED_URL_EXPIRY,
         "data_protocol": crate::core::utils::DATA_PROTOCOL_NAME,
         "hyperbeam_node_url": crate::core::utils::HYPERBEAM_NODE_URL,
+    }))
+}
+
+pub async fn handle_storage_stats() -> Json<Value> {
+    let stats = get_bucket_stats().await.unwrap_or_default();
+
+    Json(serde_json::json!({
+        "total_dataitems_count": stats.0,
+        "total_dataitems_size": stats.1
     }))
 }
 

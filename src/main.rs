@@ -1,5 +1,5 @@
 use crate::core::server::{
-    OBJECT_SIZE_LIMIT, SERVER_PORT, handle_route, serve_dataitem, upload_file,
+    OBJECT_SIZE_LIMIT, SERVER_PORT, handle_route, handle_storage_stats, serve_dataitem, upload_file,
 };
 use axum::{
     Router,
@@ -19,6 +19,7 @@ async fn main() {
 
     let router = Router::new()
         .route("/", get(handle_route))
+        .route("/stats", get(handle_storage_stats))
         .route("/upload", post(upload_file))
         .route("/{id}", get(serve_dataitem))
         .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))

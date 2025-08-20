@@ -4,7 +4,7 @@ use crate::core::{
 };
 use anyhow::Error;
 use aws_config::{BehaviorVersion, Region};
-use aws_sdk_s3::Client;
+use aws_sdk_s3::{Client, client, types::Object};
 
 /// Initialize the ~s3@1.0 device connection using the aws s3 sdk.
 async fn s3_client() -> Result<Client, Error> {
@@ -78,4 +78,43 @@ pub async fn get_dataitem_url(dataitem_id: &str) -> Result<String, Error> {
         .await?;
 
     Ok(presigned_url.uri().to_string())
+}
+
+pub async fn get_bucket_stats() -> Result<(u32, u64), Error> {
+    let mut continuation_token = None;
+    let client: Client = s3_client().await?;
+    let s3_bucket_name = get_env_var("S3_BUCKET_NAME")?;
+    let s3_dir_name = format!("{}/", get_env_var("S3_DIR_NAME")?);
+    let mut total_objects_count: u32 = 0;
+    let mut total_objects_size: u64 = 0;
+    // with the total_objects_count == 0 loop condition
+    // we hack a known condition to simulate do-while.
+    // the LCP's bucket will always have more than 1 object.
+    while continuation_token.is_some() || total_objects_count == 0 {
+        let req = client
+            .list_objects_v2()
+            .bucket(&s3_bucket_name)
+            .delimiter("/")
+            .prefix(&s3_dir_name)
+            .max_keys(1000)
+            .set_continuation_token(continuation_token.clone())
+            .send()
+            .await?;
+
+        if !req.contents().is_empty() {
+            for obj in req.contents() {
+                total_objects_count += 1;
+                total_objects_size += obj.size().unwrap_or_default() as u64;
+            }
+
+            if req.is_truncated().unwrap_or_default() {
+                continuation_token =
+                    Some(req.next_continuation_token().unwrap_or_default().to_string());
+            } else {
+                continuation_token = None;
+            }
+        }
+    }
+
+    Ok((total_objects_count, total_objects_size))
 }
