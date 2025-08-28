@@ -75,7 +75,7 @@ pub async fn upload_file(
         )
     })?;
 
-    let server_api_key = get_env_var("SERVER_API_KEY").map_err(|_| {
+    let server_api_keys = get_env_var("SERVER_API_KEYS").map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({
@@ -84,7 +84,12 @@ pub async fn upload_file(
         )
     })?;
 
-    if token != server_api_key {
+    let api_keys: Vec<String> = server_api_keys
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .collect();
+
+    if !api_keys.contains(&token.to_string()) {
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(json!({
