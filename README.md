@@ -10,11 +10,21 @@
 - GET `/:dataitem_id` : generate a presigned get_object URL to access the ANS-104 DataItem data.
 - POST `/upload` : post data to store a DataItem offchain on `~s3@1.0`
 
+### Upload data and return an agent signed DataItem
 ```bash
 echo -n "hello world" | curl -X POST https://load-s3-agent.load.network/upload \
   -H "Authorization: Bearer REACH_OUT_TO_US" \
   -F "file=@-;type=text/plain" \
   -F "content_type=text/plain"
+```
+
+### Upload a signed DataItem and store it in Load S3
+
+```bash
+curl -X POST https://load-s3-agent.load.network/upload \
+  -H "Authorization: Bearer REACH_OUT_TO_US" \
+  -H "signed: true" \
+  -F "file=@your-signed-dataitem.bin"
 ```
 
 ## License

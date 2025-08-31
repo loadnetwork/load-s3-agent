@@ -1,5 +1,5 @@
 use crate::core::{
-    s3::{get_bucket_stats, get_dataitem_url, store_dataitem},
+    s3::{get_bucket_stats, get_dataitem_url, store_dataitem, store_signed_dataitem},
     utils::get_env_var,
 };
 use axum::{
@@ -84,10 +84,7 @@ pub async fn upload_file(
         )
     })?;
 
-    let api_keys: Vec<String> = server_api_keys
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .collect();
+    let api_keys: Vec<String> = server_api_keys.split(',').map(|s| s.trim().to_string()).collect();
 
     if !api_keys.contains(&token.to_string()) {
         return Err((
@@ -165,7 +162,16 @@ pub async fn upload_file(
 
     let content_type_str = content_type.as_deref().unwrap_or("application/octet-stream");
 
-    match store_dataitem(file_bytes, content_type_str).await {
+    let is_signed =
+        headers.get("signed").and_then(|h| h.to_str().ok()).map(|s| s == "true").unwrap_or(false);
+
+    let result = if is_signed {
+        store_signed_dataitem(file_bytes).await
+    } else {
+        store_dataitem(file_bytes, content_type_str).await
+    };
+
+    match result {
         Ok(dataitem_id) => Ok(Json(json!({
             "success": true,
             "dataitem_id": dataitem_id,

@@ -1,10 +1,10 @@
 use crate::core::{
-    ans104::create_dataitem,
+    ans104::{create_dataitem, reconstruct_dataitem_data},
     utils::{PRESIGNED_URL_EXPIRY, get_env_var},
 };
 use anyhow::Error;
 use aws_config::{BehaviorVersion, Region};
-use aws_sdk_s3::{Client, client, types::Object};
+use aws_sdk_s3::Client;
 
 /// Initialize the ~s3@1.0 device connection using the aws s3 sdk.
 async fn s3_client() -> Result<Client, Error> {
@@ -55,6 +55,42 @@ pub async fn store_dataitem(data: Vec<u8>, content_type: &str) -> Result<String,
         .key(key_raw)
         .body(data.into())
         .content_type(content_type)
+        .send()
+        .await?;
+
+    Ok(dataitem_id)
+}
+
+pub async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error> {
+    let s3_bucket_name = get_env_var("S3_BUCKET_NAME").unwrap();
+    let s3_dir_name = get_env_var("S3_DIR_NAME").unwrap();
+    let s3_dir_name_raw = get_env_var("S3_RAW_DIR_NAME").unwrap();
+
+    let client = s3_client().await?;
+    let dataitem = reconstruct_dataitem_data(data)?;
+    let dataitem_id = dataitem.0.arweave_id();
+
+    let key_dataitem: String = format!("{s3_dir_name}/{dataitem_id}.ans104");
+    let key_raw: String = format!("{s3_dir_name_raw}/{dataitem_id}");
+
+    // store it as ans-104 serialized dataitem
+    client
+        .put_object()
+        .bucket(&s3_bucket_name)
+        .key(key_dataitem)
+        .body(dataitem.0.to_bytes()?.into())
+        .content_type("application/octet-stream")
+        .send()
+        .await?;
+
+    // store the dataitem raw body for fast retrievals
+
+    client
+        .put_object()
+        .bucket(s3_bucket_name)
+        .key(key_raw)
+        .body(dataitem.0.data.into())
+        .content_type(dataitem.1)
         .send()
         .await?;
 
