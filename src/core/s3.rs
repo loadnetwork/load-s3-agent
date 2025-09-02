@@ -2,7 +2,7 @@ use crate::core::{
     ans104::{create_dataitem, reconstruct_dataitem_data},
     utils::{PRESIGNED_URL_EXPIRY, get_env_var},
 };
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::Client;
 
@@ -114,6 +114,25 @@ pub async fn get_dataitem_url(dataitem_id: &str) -> Result<String, Error> {
         .await?;
 
     Ok(presigned_url.uri().to_string())
+}
+
+pub(crate) async fn get_dataitem(dataitem_id: &str) -> Result<Vec<u8>, Error> {
+    let client = s3_client().await?;
+    let s3_bucket_name = get_env_var("S3_BUCKET_NAME")?;
+    let s3_dir_name = get_env_var("S3_DIR_NAME")?;
+
+    let key: String = format!("{s3_dir_name}/{dataitem_id}.ans104");
+
+    let dataitem = client
+        .get_object()
+        .bucket(s3_bucket_name)
+        .key(key)
+        .send()
+        .await?;
+
+    let data = dataitem.body.collect().await?.into_bytes().to_vec();
+
+    Ok(data)
 }
 
 pub async fn get_bucket_stats() -> Result<(u32, u64), Error> {

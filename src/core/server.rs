@@ -1,5 +1,6 @@
 use crate::core::{
     s3::{get_bucket_stats, get_dataitem_url, store_dataitem, store_signed_dataitem},
+    bundler::post_dataitem,
     utils::get_env_var,
 };
 use axum::{
@@ -181,6 +182,65 @@ pub async fn upload_file(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({
                 "error": format!("failed to store file: {}", e)
+            })),
+        )),
+    }
+}
+
+pub async fn handle_post_dataitem(
+    headers: HeaderMap,
+    Path(dataitem_id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let auth_header =
+        headers.get("authorization").and_then(|h| h.to_str().ok()).ok_or_else(|| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({
+                    "error": "missing Authorization header"
+                })),
+            )
+        })?;
+
+    let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "invalid Authorization header format. Expected 'Bearer <token>'"
+            })),
+        )
+    })?;
+
+    let server_api_keys = get_env_var("SERVER_API_KEYS").map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "error": "server configuration error"
+            })),
+        )
+    })?;
+
+    let api_keys: Vec<String> = server_api_keys.split(',').map(|s| s.trim().to_string()).collect();
+
+    if !api_keys.contains(&token.to_string()) {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "invalid API key"
+            })),
+        ));
+    }
+
+    match post_dataitem(dataitem_id.clone()).await {
+        Ok(response) => Ok(Json(json!({
+            "success": true,
+            "dataitem_id": dataitem_id,
+            "bundler_response": response,
+            "message": "dataitem posted to arweave successfully"
+        }))),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "error": format!("failed to post dataitem: {}", e)
             })),
         )),
     }
