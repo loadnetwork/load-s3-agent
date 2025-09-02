@@ -2,7 +2,7 @@ use crate::core::{
     ans104::{create_dataitem, reconstruct_dataitem_data},
     utils::{PRESIGNED_URL_EXPIRY, get_env_var},
 };
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::Client;
 
@@ -123,12 +123,7 @@ pub(crate) async fn get_dataitem(dataitem_id: &str) -> Result<Vec<u8>, Error> {
 
     let key: String = format!("{s3_dir_name}/{dataitem_id}.ans104");
 
-    let dataitem = client
-        .get_object()
-        .bucket(s3_bucket_name)
-        .key(key)
-        .send()
-        .await?;
+    let dataitem = client.get_object().bucket(s3_bucket_name).key(key).send().await?;
 
     let data = dataitem.body.collect().await?.into_bytes().to_vec();
 

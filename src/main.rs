@@ -1,5 +1,6 @@
 use crate::core::server::{
-    OBJECT_SIZE_LIMIT, SERVER_PORT, handle_route, handle_storage_stats, serve_dataitem, upload_file, handle_post_dataitem
+    OBJECT_SIZE_LIMIT, SERVER_PORT, handle_post_dataitem, handle_route, handle_storage_stats,
+    serve_dataitem, upload_file,
 };
 use axum::{
     Router,
@@ -21,7 +22,7 @@ async fn main() {
         .route("/", get(handle_route))
         .route("/stats", get(handle_storage_stats))
         .route("/upload", post(upload_file))
-        .route("/arweave/{id}", post(handle_post_dataitem))
+        .route("/post/{id}", post(handle_post_dataitem))
         .route("/{id}", get(serve_dataitem))
         .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))
         .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))
