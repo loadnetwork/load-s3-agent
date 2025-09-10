@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-s3-agent
+  namespace: business
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-s3-agent
+  template:
+    metadata:
+      labels:
+        app: load-s3-agent
+    spec:
+      containers:
+        - name: load-s3-agent
+          image: localhost:5000/load-s3-agent:latest
+          ports:
+            - containerPort: 8000
+          securityContext:
+            runAsUser: 0

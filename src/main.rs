@@ -8,11 +8,15 @@ use axum::{
     routing::{get, post},
 };
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer};
+use dotenvy::dotenv;
 
 mod core;
 
 #[tokio::main]
 async fn main() {
+    // Load environment variables from a .env file if present
+    dotenv().ok();
+
     let cors = CorsLayer::new()
         .allow_origin(tower_http::cors::Any)
         .allow_methods(tower_http::cors::Any)
@@ -28,7 +32,10 @@ async fn main() {
         .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))
         .layer(cors);
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{SERVER_PORT}")).await.unwrap();
-    println!("Server running on PORT: {SERVER_PORT}");
+    // Use SERVER_PORT from env if set, otherwise default to the constant
+    let port = std::env::var("SERVER_PORT").unwrap_or_else(|_| SERVER_PORT.to_string());
+
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
+    println!("Server running on PORT: {port}");
     axum::serve(listener, router).await.unwrap();
 }
