@@ -182,7 +182,7 @@ pub async fn store_lcp_priv_bucket_dataitem(data: Vec<u8>, content_type: &str, b
 
     let key_dataitem: String = format!("{dataitem_id}.ans104");
     // store it as ans-104 serialized dataitem
-    let res = client
+    client
         .put_object()
         .bucket(bucket_name)
         .key(key_dataitem)
@@ -192,4 +192,14 @@ pub async fn store_lcp_priv_bucket_dataitem(data: Vec<u8>, content_type: &str, b
         .await?;
 
     Ok(dataitem_id)
+}
+
+pub(crate) async fn get_bucket_tags(bucket_name: &str) -> Result<Vec<String>, Error> {
+    let client = s3_client().await?;
+
+    let req = client.get_bucket_tagging().bucket(bucket_name).send().await?;
+    let tags: Vec<(String, String)> = req.tag_set.iter().map(|tag| (tag.key.to_string(), tag.value.to_string())).collect();
+    let load_acc_tags: Vec<String> = tags.iter().filter(|tag| tag.1.starts_with("load_acc_")).map(|tag| tag.1.clone()).collect();
+    println!("bucket load acc tags {:?}", load_acc_tags);
+    Ok(load_acc_tags)
 }
