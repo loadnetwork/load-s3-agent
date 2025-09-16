@@ -1,8 +1,9 @@
 use crate::core::{
     ans104::{create_dataitem, reconstruct_dataitem_data},
     utils::{PRESIGNED_URL_EXPIRY, get_env_var},
+    lcp::validate_bucket_ownership
 };
-use anyhow::Error;
+use anyhow::{Error, anyhow};
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::Client;
 
@@ -167,4 +168,28 @@ pub async fn get_bucket_stats() -> Result<(u32, u64), Error> {
     }
 
     Ok((total_objects_count, total_objects_size))
+}
+
+pub async fn store_lcp_priv_bucket_dataitem(data: Vec<u8>, content_type: &str, bucket_name: &str, load_acc: &str) -> Result<String, Error> {
+
+    if !validate_bucket_ownership(bucket_name, load_acc).await? {
+        return Err(anyhow!("invalid load_acc api key"));
+    }
+
+    let client = s3_client().await?;
+    let dataitem = create_dataitem(data.clone(), content_type)?;
+    let dataitem_id = dataitem.arweave_id();
+
+    let key_dataitem: String = format!("{dataitem_id}.ans104");
+    // store it as ans-104 serialized dataitem
+    let res = client
+        .put_object()
+        .bucket(bucket_name)
+        .key(key_dataitem)
+        .body(dataitem.to_bytes()?.into())
+        .content_type("application/octet-stream")
+        .send()
+        .await?;
+
+    Ok(dataitem_id)
 }

@@ -1,6 +1,6 @@
 use crate::core::{
     bundler::post_dataitem,
-    s3::{get_bucket_stats, get_dataitem_url, store_dataitem, store_signed_dataitem},
+    s3::{get_bucket_stats, get_dataitem_url, store_dataitem, store_signed_dataitem, store_lcp_priv_bucket_dataitem},
     utils::get_env_var,
 };
 use axum::{
@@ -186,6 +186,127 @@ pub async fn upload_file(
         )),
     }
 }
+
+pub async fn handle_private_file(
+    headers: HeaderMap,
+    mut multipart: Multipart,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+
+    let auth_header = headers
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or_else(|| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({
+                    "error": "missing Authorization header"
+                })),
+            )
+        })?;
+
+    let load_acc = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "invalid Authorization header format. Expected 'Bearer <token>'"
+            })),
+        )
+    })?;
+
+    let bucket_name = headers
+        .get("bucket_name")
+        .and_then(|h| h.to_str().ok())
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "error": "missing bucket_name header"
+                })),
+            )
+        })?;
+
+    let mut file_data: Option<Vec<u8>> = None;
+    let mut content_type: Option<String> = None;
+
+    while let Some(field) = multipart.next_field().await.map_err(|_| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": "invalid multipart data"
+            })),
+        )
+    })? {
+        let field_name = field.name().unwrap_or("");
+
+        match field_name {
+            "file" => {
+                content_type = field.content_type().map(|ct| ct.to_string());
+                file_data = Some(
+                    field
+                        .bytes()
+                        .await
+                        .map_err(|_| {
+                            (
+                                StatusCode::BAD_REQUEST,
+                                Json(json!({
+                                    "error": "failed to read file data"
+                                })),
+                            )
+                        })?
+                        .to_vec(),
+                );
+            }
+            "content_type" => {
+                if content_type.is_none() {
+                    content_type = Some(field.text().await.map_err(|_| {
+                        (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({
+                                "error": "failed to read content type"
+                            })),
+                        )
+                    })?);
+                }
+            }
+            _ => {
+                // skip
+            }
+        }
+    }
+
+    let file_bytes = file_data.ok_or_else(|| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": "no file data provided"
+            })),
+        )
+    })?;
+
+    if file_bytes.len() > OBJECT_SIZE_LIMIT {
+        return Err((
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(json!({"error": format!("file size exceeds limit - {OBJECT_SIZE_LIMIT} bytes")})),
+        ));
+    }
+
+    let content_type_str = content_type.as_deref().unwrap_or("application/octet-stream");
+    // private dataitems store
+    match store_lcp_priv_bucket_dataitem(file_bytes, content_type_str, bucket_name, load_acc).await {
+        Ok(dataitem_id) => Ok(Json(json!({
+            "success": true,
+            "dataitem_id": dataitem_id,
+            "message": "file uploaded to private bucket successfully"
+        }))),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "error": format!("failed to store file: {}", e)
+            })),
+        )),
+    }
+}
+
 
 pub async fn handle_post_dataitem(
     headers: HeaderMap,
