@@ -215,6 +215,9 @@ pub async fn handle_private_file(
 
     let bucket_name = headers
         .get("bucket_name")
+        .or_else(|| headers.get("bucket-name"))
+        .or_else(|| headers.get("x-bucket-name"))
+        .or_else(|| headers.get("bucketname"))
         .and_then(|h| h.to_str().ok())
         .ok_or_else(|| {
             (
