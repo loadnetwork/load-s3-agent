@@ -1,14 +1,14 @@
 use crate::core::server::{
-    OBJECT_SIZE_LIMIT, SERVER_PORT, handle_post_dataitem, handle_route, handle_storage_stats,
-    serve_dataitem, upload_file, handle_private_file
+    OBJECT_SIZE_LIMIT, SERVER_PORT, handle_get_bucket_registry, handle_post_dataitem,
+    handle_private_file, handle_route, handle_storage_stats, serve_dataitem, upload_file,
 };
 use axum::{
     Router,
     extract::DefaultBodyLimit,
     routing::{get, post},
 };
-use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer};
 use dotenvy::dotenv;
+use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer};
 
 mod core;
 
@@ -28,6 +28,7 @@ async fn main() {
         .route("/upload", post(upload_file))
         .route("/upload/private", post(handle_private_file))
         .route("/post/{id}", post(handle_post_dataitem))
+        .route("/registry/{bucket_name}", get(handle_get_bucket_registry))
         .route("/{id}", get(serve_dataitem))
         .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))
         .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))

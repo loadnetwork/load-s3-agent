@@ -1,7 +1,8 @@
 use crate::core::{
     ans104::{create_dataitem, reconstruct_dataitem_data},
+    lcp::validate_bucket_ownership,
+    registry::set_dataitem_name,
     utils::{PRESIGNED_URL_EXPIRY, get_env_var},
-    lcp::validate_bucket_ownership
 };
 use anyhow::{Error, anyhow};
 use aws_config::{BehaviorVersion, Region};
@@ -170,8 +171,13 @@ pub async fn get_bucket_stats() -> Result<(u32, u64), Error> {
     Ok((total_objects_count, total_objects_size))
 }
 
-pub async fn store_lcp_priv_bucket_dataitem(data: Vec<u8>, content_type: &str, bucket_name: &str, load_acc: &str) -> Result<String, Error> {
-
+pub async fn store_lcp_priv_bucket_dataitem(
+    data: Vec<u8>,
+    content_type: &str,
+    bucket_name: &str,
+    load_acc: &str,
+    dataitem_name: &str,
+) -> Result<String, Error> {
     if !validate_bucket_ownership(bucket_name, load_acc).await? {
         return Err(anyhow!("invalid load_acc api key"));
     }
@@ -187,9 +193,16 @@ pub async fn store_lcp_priv_bucket_dataitem(data: Vec<u8>, content_type: &str, b
         .bucket(bucket_name)
         .key(key_dataitem)
         .body(dataitem.to_bytes()?.into())
+        // set name even if its empty
+        .tagging(format!("dataitem-name={dataitem_name}"))
         .content_type("application/octet-stream")
         .send()
         .await?;
+
+    // register the dataitem name if provided
+    if !dataitem_name.is_empty() {
+        set_dataitem_name(bucket_name, &dataitem_id, dataitem_name)?;
+    }
 
     Ok(dataitem_id)
 }
@@ -198,8 +211,10 @@ pub(crate) async fn get_bucket_tags(bucket_name: &str) -> Result<Vec<String>, Er
     let client = s3_client().await?;
 
     let req = client.get_bucket_tagging().bucket(bucket_name).send().await?;
-    let tags: Vec<(String, String)> = req.tag_set.iter().map(|tag| (tag.key.to_string(), tag.value.to_string())).collect();
-    let load_acc_tags: Vec<String> = tags.iter().filter(|tag| tag.1.starts_with("load_acc_")).map(|tag| tag.1.clone()).collect();
+    let tags: Vec<(String, String)> =
+        req.tag_set.iter().map(|tag| (tag.key.to_string(), tag.value.to_string())).collect();
+    let load_acc_tags: Vec<String> =
+        tags.iter().filter(|tag| tag.1.starts_with("load_acc_")).map(|tag| tag.1.clone()).collect();
     println!("bucket load acc tags {:?}", load_acc_tags);
     Ok(load_acc_tags)
 }

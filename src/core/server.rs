@@ -1,6 +1,10 @@
 use crate::core::{
     bundler::post_dataitem,
-    s3::{get_bucket_stats, get_dataitem_url, store_dataitem, store_signed_dataitem, store_lcp_priv_bucket_dataitem},
+    registry::get_bucket_registry,
+    s3::{
+        get_bucket_stats, get_dataitem_url, store_dataitem, store_lcp_priv_bucket_dataitem,
+        store_signed_dataitem,
+    },
     utils::get_env_var,
 };
 use axum::{
@@ -191,11 +195,8 @@ pub async fn handle_private_file(
     headers: HeaderMap,
     mut multipart: Multipart,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-
-    let auth_header = headers
-        .get("authorization")
-        .and_then(|h| h.to_str().ok())
-        .ok_or_else(|| {
+    let auth_header =
+        headers.get("authorization").and_then(|h| h.to_str().ok()).ok_or_else(|| {
             (
                 StatusCode::UNAUTHORIZED,
                 Json(json!({
@@ -227,6 +228,13 @@ pub async fn handle_private_file(
                 })),
             )
         })?;
+
+    let dataitem_name = headers
+        .get("x-dataitem-name")
+        .or_else(|| headers.get("dataitem-name"))
+        .or_else(|| headers.get("dataitemname"))
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
 
     let mut file_data: Option<Vec<u8>> = None;
     let mut content_type: Option<String> = None;
@@ -295,10 +303,19 @@ pub async fn handle_private_file(
 
     let content_type_str = content_type.as_deref().unwrap_or("application/octet-stream");
     // private dataitems store
-    match store_lcp_priv_bucket_dataitem(file_bytes, content_type_str, bucket_name, load_acc).await {
+    match store_lcp_priv_bucket_dataitem(
+        file_bytes,
+        content_type_str,
+        bucket_name,
+        load_acc,
+        dataitem_name,
+    )
+    .await
+    {
         Ok(dataitem_id) => Ok(Json(json!({
             "success": true,
             "dataitem_id": dataitem_id,
+            "dataitem_name": dataitem_name,
             "message": "file uploaded to private bucket successfully"
         }))),
         Err(e) => Err((
@@ -309,7 +326,6 @@ pub async fn handle_private_file(
         )),
     }
 }
-
 
 pub async fn handle_post_dataitem(
     headers: HeaderMap,
@@ -366,6 +382,40 @@ pub async fn handle_post_dataitem(
             Json(json!({
                 "error": format!("failed to post dataitem: {}", e)
             })),
+        )),
+    }
+}
+
+pub async fn handle_get_bucket_registry(
+    headers: HeaderMap,
+    Path(bucket_name): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let auth_header =
+        headers.get("authorization").and_then(|h| h.to_str().ok()).ok_or_else(|| {
+            (StatusCode::UNAUTHORIZED, Json(json!({"error": "missing Authorization header"})))
+        })?;
+
+    let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
+        (StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid Authorization header format"})))
+    })?;
+
+    let aws_secret = get_env_var("AWS_SECRET_ACCESS_KEY").map_err(|_| {
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "server configuration error"})))
+    })?;
+
+    if token != aws_secret {
+        return Err((StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid API key"}))));
+    }
+
+    match get_bucket_registry(&bucket_name) {
+        Ok(registry_entries) => Ok(Json(json!({
+            "success": true,
+            "bucket_name": bucket_name,
+            "entries": registry_entries
+        }))),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("failed to get registry: {}", e)})),
         )),
     }
 }
