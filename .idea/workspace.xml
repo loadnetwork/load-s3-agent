@@ -8,7 +8,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="624b1f34-9db1-42cd-a6ca-b8b0c8728e69" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/k8s/pvc.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/k8s/deployment.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/k8s/deployment.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -104,7 +104,7 @@
       <updated>1757505373437</updated>
       <workItem from="1757505374442" duration="2924000" />
       <workItem from="1758199830779" duration="20000" />
-      <workItem from="1758199856707" duration="234000" />
+      <workItem from="1758199856707" duration="497000" />
     </task>
     <servers />
   </component>
