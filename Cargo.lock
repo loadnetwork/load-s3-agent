@@ -2039,7 +2039,7 @@ checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 
 [[package]]
 name = "load-s3-agent"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "aws-config",

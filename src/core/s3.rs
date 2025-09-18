@@ -215,6 +215,5 @@ pub(crate) async fn get_bucket_tags(bucket_name: &str) -> Result<Vec<String>, Er
         req.tag_set.iter().map(|tag| (tag.key.to_string(), tag.value.to_string())).collect();
     let load_acc_tags: Vec<String> =
         tags.iter().filter(|tag| tag.1.starts_with("load_acc_")).map(|tag| tag.1.clone()).collect();
-    println!("bucket load acc tags {:?}", load_acc_tags);
     Ok(load_acc_tags)
 }

@@ -1,32 +1,52 @@
 use crate::core::utils::get_env_var;
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct RegistryEntry {
-    pub bucket_name: String,
     pub dataitem_id: String,
     pub dataitem_name: String,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
-pub struct Registry {
+pub struct BucketRegistry {
+    pub bucket_name: String,
     pub data: Vec<RegistryEntry>,
 }
 
-fn load_registry(path: &str) -> Result<Registry, Error> {
-    if Path::new(path).exists() {
-        let content = fs::read_to_string(path)?;
+fn get_bucket_file_path(bucket_name: &str) -> Result<PathBuf, Error> {
+    let registry_dir = get_env_var("S3_AGENT_REGISTRY_DIR_PATH")?;
+
+    // Sanitize bucket name for filesystem
+    let safe_bucket_name = bucket_name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_");
+
+    Ok(Path::new(&registry_dir).join(format!("{safe_bucket_name}.json")))
+}
+
+fn load_bucket_registry(bucket_name: &str) -> Result<BucketRegistry, Error> {
+    let file_path = get_bucket_file_path(bucket_name)?;
+
+    if file_path.exists() {
+        let content = fs::read_to_string(&file_path)?;
         Ok(serde_json::from_str(&content)?)
     } else {
-        Ok(Registry::default())
+        Ok(BucketRegistry { bucket_name: bucket_name.to_string(), data: Vec::new() })
     }
 }
 
-fn save_registry(path: &str, registry: &Registry) -> Result<(), Error> {
+fn save_bucket_registry(registry: &BucketRegistry) -> Result<(), Error> {
+    let file_path = get_bucket_file_path(&registry.bucket_name)?;
+
+    if let Some(parent) = file_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
     let json = serde_json::to_string_pretty(registry)?;
-    fs::write(path, json)?;
+    fs::write(&file_path, json)?;
     Ok(())
 }
 
@@ -35,30 +55,24 @@ pub(crate) fn set_dataitem_name(
     dataitem_id: &str,
     dataitem_name: &str,
 ) -> Result<bool, Error> {
-    let registry_path = get_env_var("S3_AGENT_REGISTRY_FILE_PATH")?;
+    let mut registry = load_bucket_registry(bucket_name)?;
 
-    if let Some(parent) = Path::new(&registry_path).parent() {
-        fs::create_dir_all(parent)?;
+    // check if dataitem entry already exists and update, or add new
+    if let Some(existing) = registry.data.iter_mut().find(|entry| entry.dataitem_id == dataitem_id)
+    {
+        existing.dataitem_name = dataitem_name.to_string();
+    } else {
+        registry.data.push(RegistryEntry {
+            dataitem_id: dataitem_id.to_string(),
+            dataitem_name: dataitem_name.to_string(),
+        });
     }
 
-    let mut registry = load_registry(&registry_path)?;
-    registry.data.push(RegistryEntry {
-        bucket_name: bucket_name.to_string(),
-        dataitem_id: dataitem_id.to_string(),
-        dataitem_name: dataitem_name.to_string(),
-    });
-
-    save_registry(&registry_path, &registry)?;
-
+    save_bucket_registry(&registry)?;
     Ok(true)
 }
 
 pub(crate) fn get_bucket_registry(bucket_name: &str) -> Result<Vec<RegistryEntry>, Error> {
-    let registry_path = get_env_var("S3_AGENT_REGISTRY_FILE_PATH")?;
-
-    let registry = load_registry(&registry_path)?;
-    let dataitems: Vec<RegistryEntry> =
-        registry.data.iter().filter(|di| di.bucket_name == bucket_name).cloned().collect();
-
-    Ok(dataitems)
+    let registry = load_bucket_registry(bucket_name)?;
+    Ok(registry.data)
 }
