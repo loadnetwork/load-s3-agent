@@ -20,3 +20,10 @@ spec:
             - containerPort: 8000
           securityContext:
             runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /app/.registry
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: s3-agent-pvc

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-agent-pvc
+  namespace: business
+spec:
+  accessModes:
+    # If you plan to run >1 replica mounting the same path, you’ll need ReadWriteMany (RWX).
+    # Otherwise ReadWriteOnce (RWO) is fine for a single replica.
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # Optional: set a StorageClass explicitly
+  # storageClassName: standard
