@@ -236,6 +236,8 @@ pub async fn handle_private_file(
         .and_then(|h| h.to_str().ok())
         .unwrap_or("");
 
+    let folder_name = headers.get("x-folder-name").and_then(|h| h.to_str().ok()).unwrap_or("");
+
     let mut file_data: Option<Vec<u8>> = None;
     let mut content_type: Option<String> = None;
 
@@ -307,6 +309,7 @@ pub async fn handle_private_file(
         file_bytes,
         content_type_str,
         bucket_name,
+        folder_name,
         load_acc,
         dataitem_name,
     )
@@ -316,6 +319,7 @@ pub async fn handle_private_file(
             "success": true,
             "dataitem_id": dataitem_id,
             "dataitem_name": dataitem_name,
+            "folder_name": folder_name,
             "message": "file uploaded to private bucket successfully"
         }))),
         Err(e) => Err((

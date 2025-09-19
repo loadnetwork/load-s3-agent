@@ -175,9 +175,11 @@ pub async fn store_lcp_priv_bucket_dataitem(
     data: Vec<u8>,
     content_type: &str,
     bucket_name: &str,
+    folder_name: &str,
     load_acc: &str,
     dataitem_name: &str,
 ) -> Result<String, Error> {
+    let mut key_dataitem: String = "".to_string();
     if !validate_bucket_ownership(bucket_name, load_acc).await? {
         return Err(anyhow!("invalid load_acc api key"));
     }
@@ -186,7 +188,12 @@ pub async fn store_lcp_priv_bucket_dataitem(
     let dataitem = create_dataitem(data.clone(), content_type)?;
     let dataitem_id = dataitem.arweave_id();
 
-    let key_dataitem: String = format!("{dataitem_id}.ans104");
+    if !folder_name.is_empty() {
+        key_dataitem = format!("{folder_name}/{dataitem_id}.ans104")
+    } else {
+        key_dataitem = format!("{dataitem_id}.ans104");
+    }
+
     // store it as ans-104 serialized dataitem
     client
         .put_object()
