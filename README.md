@@ -26,6 +26,7 @@ echo -n "hello world" | curl -X POST https://load-s3-agent.load.network/upload/p
   -H "Authorization: Bearer $load_acc_api_key" \
   -H "x-bucket-name: $bucket_name" \
   -H "x-dataitem-name: $dataitem_name" \
+  -H "x-folder-name": $folder_name" \ 
   -F "file=@-;type=text/plain" \
   -F "content_type=text/plain"
 ```
