@@ -198,7 +198,7 @@ pub async fn store_lcp_priv_bucket_dataitem(
     client
         .put_object()
         .bucket(bucket_name)
-        .key(key_dataitem)
+        .key(&key_dataitem)
         .body(dataitem.to_bytes()?.into())
         // set name even if its empty
         .tagging(format!("dataitem-name={dataitem_name}"))
@@ -208,7 +208,7 @@ pub async fn store_lcp_priv_bucket_dataitem(
 
     // register the dataitem name if provided
     if !dataitem_name.is_empty() {
-        set_dataitem_name(bucket_name, &dataitem_id, dataitem_name)?;
+        set_dataitem_name(bucket_name, &key_dataitem, dataitem_name)?;
     }
 
     Ok(dataitem_id)
