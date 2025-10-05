@@ -304,7 +304,12 @@ pub async fn handle_private_file(
     }
 
     let content_type_str = content_type.as_deref().unwrap_or("application/octet-stream");
+
+    let is_signed =
+        headers.get("signed").and_then(|h| h.to_str().ok()).map(|s| s == "true").unwrap_or(false);
+
     // private dataitems store
+    // supports signed (ANS-104 ready) and unsigned (raw dataitem's data) data ingress
     match store_lcp_priv_bucket_dataitem(
         file_bytes,
         content_type_str,
@@ -312,6 +317,7 @@ pub async fn handle_private_file(
         folder_name,
         load_acc,
         dataitem_name,
+        is_signed,
     )
     .await
     {
@@ -320,6 +326,7 @@ pub async fn handle_private_file(
             "dataitem_id": dataitem_id,
             "dataitem_name": dataitem_name,
             "folder_name": folder_name,
+            "is_signed": is_signed,
             "message": "file uploaded to private bucket successfully"
         }))),
         Err(e) => Err((

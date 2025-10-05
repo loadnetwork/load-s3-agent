@@ -27,6 +27,7 @@ echo -n "hello world" | curl -X POST https://load-s3-agent.load.network/upload/p
   -H "x-bucket-name: $bucket_name" \
   -H "x-dataitem-name: $dataitem_name" \
   -H "x-folder-name": $folder_name" \ 
+  -H "signed: false" \ 
   -F "file=@-;type=text/plain" \
   -F "content_type=text/plain"
 ```

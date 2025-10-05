@@ -178,6 +178,7 @@ pub async fn store_lcp_priv_bucket_dataitem(
     folder_name: &str,
     load_acc: &str,
     dataitem_name: &str,
+    is_signed: bool,
 ) -> Result<String, Error> {
     let mut key_dataitem: String = "".to_string();
     if !validate_bucket_ownership(bucket_name, load_acc).await? {
@@ -185,7 +186,13 @@ pub async fn store_lcp_priv_bucket_dataitem(
     }
 
     let client = s3_client().await?;
-    let dataitem = create_dataitem(data.clone(), content_type)?;
+
+    let dataitem = if is_signed {
+        reconstruct_dataitem_data(data)?.0
+    } else {
+        create_dataitem(data.clone(), content_type)?
+    };
+
     let dataitem_id = dataitem.arweave_id();
 
     if !folder_name.is_empty() {
