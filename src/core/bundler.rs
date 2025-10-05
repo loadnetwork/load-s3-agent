@@ -2,7 +2,7 @@ use crate::core::s3::get_dataitem;
 use anyhow::Error;
 use bundles_rs::{
     ans104::data_item::DataItem,
-    bundler::{SendTransactionResponse, BundlerClient},
+    bundler::{BundlerClient, SendTransactionResponse},
 };
 
 pub(crate) async fn post_dataitem(id: String) -> Result<SendTransactionResponse, Error> {
