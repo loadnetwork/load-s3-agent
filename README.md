@@ -27,9 +27,22 @@ echo -n "hello world" | curl -X POST https://load-s3-agent.load.network/upload/p
   -H "x-bucket-name: $bucket_name" \
   -H "x-dataitem-name: $dataitem_name" \
   -H "x-folder-name": $folder_name" \ 
-  -H "signed: false" \ 
+  -H "signed: false" \  
   -F "file=@-;type=text/plain" \
   -F "content_type=text/plain"
+```
+
+### Upload signed dataitem to a private bucket (private dataitem)
+
+```bash
+curl -X POST https://load-s3-agent.load.network/upload/private \
+  -H "Authorization: Bearer $load_acc_api_key" \
+  -H "signed: true" \
+  -H "bucket_name: $bucket_name" \
+  -H "x-dataitem-name: $dataitem_name" \
+  -H "x-folder-name": $folder_name" \ 
+  -F "file=@path-signed-dataitem.ans104" \
+  -F "content_type=application/octet-stream"
 ```
 
 ### Upload a signed DataItem and store it in Load S3

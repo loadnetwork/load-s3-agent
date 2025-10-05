@@ -34,8 +34,8 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
 name = "ans104"
-version = "0.2.0"
-source = "git+https://github.com/loadnetwork/bundles-rs.git?branch=main#600f1859b7339eb16e00abb8f8463fbed817d3ce"
+version = "0.3.0"
+source = "git+https://github.com/loadnetwork/bundles-rs.git?branch=main#0c749906253ae2977d77421dd7b89c8b949b3a83"
 dependencies = [
  "anyhow",
  "apache-avro",
@@ -753,8 +753,8 @@ checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
 
 [[package]]
 name = "bundler"
-version = "0.2.0"
-source = "git+https://github.com/loadnetwork/bundles-rs.git?branch=main#600f1859b7339eb16e00abb8f8463fbed817d3ce"
+version = "0.3.0"
+source = "git+https://github.com/loadnetwork/bundles-rs.git?branch=main#0c749906253ae2977d77421dd7b89c8b949b3a83"
 dependencies = [
  "ans104",
  "anyhow",
@@ -768,7 +768,7 @@ dependencies = [
 [[package]]
 name = "bundles_rs"
 version = "0.2.0"
-source = "git+https://github.com/loadnetwork/bundles-rs.git?branch=main#600f1859b7339eb16e00abb8f8463fbed817d3ce"
+source = "git+https://github.com/loadnetwork/bundles-rs.git?branch=main#0c749906253ae2977d77421dd7b89c8b949b3a83"
 dependencies = [
  "ans104",
  "bundler",
@@ -949,8 +949,8 @@ checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
 name = "crypto"
-version = "0.2.0"
-source = "git+https://github.com/loadnetwork/bundles-rs.git?branch=main#600f1859b7339eb16e00abb8f8463fbed817d3ce"
+version = "0.3.0"
+source = "git+https://github.com/loadnetwork/bundles-rs.git?branch=main#0c749906253ae2977d77421dd7b89c8b949b3a83"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -1766,7 +1766,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.0",
+ "socket2 0.5.10",
  "system-configuration",
  "tokio",
  "tower-service",
