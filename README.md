@@ -8,8 +8,8 @@
 - GET `/` : agent info
 - GET `/stats` : storage stats
 - GET `/:dataitem_id` : generate a presigned get_object URL to access the ANS-104 DataItem data.
-- POST `/upload` : post data to store a public offchain DataItem on `~s3@1.0`
-- POST `/upload/private` : post data to store a private offchain DataItem on `~s3@1.0`
+- POST `/upload` : post data (or signed dataitem) to store a public offchain DataItem on `~s3@1.0`
+- POST `/upload/private` : post data (or signed dataitem) to store a private offchain DataItem on `~s3@1.0`
 - POST `/post/:dataitem_id` : post an `~s3@1.0` public DataItem to Arweave via Turbo (N.B: Turbo covers any dataitem cost with size <= 100KB).
 
 ### Upload data and return an agent public signed DataItem
@@ -56,7 +56,7 @@ curl -X POST https://load-s3-agent.load.network/upload \
 
 ### Post offchain DataItem to Arweave
 
-for offchain dataitem `eoNAO-HlYasHJt3QFDuRrMVdLUxq5B8bXe4N_kboNWs`
+example: for offchain dataitem =  `eoNAO-HlYasHJt3QFDuRrMVdLUxq5B8bXe4N_kboNWs`
 
 ```bash
 curl -X POST \
