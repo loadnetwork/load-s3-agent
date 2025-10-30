@@ -5,7 +5,7 @@ use crate::core::{
         get_bucket_stats, get_dataitem_url, store_dataitem, store_lcp_priv_bucket_dataitem,
         store_signed_dataitem,
     },
-    utils::get_env_var,
+    utils::{get_env_var, is_valid_api_key},
 };
 use axum::{
     Json,
@@ -92,12 +92,18 @@ pub async fn upload_file(
     let api_keys: Vec<String> = server_api_keys.split(',').map(|s| s.trim().to_string()).collect();
 
     if !api_keys.contains(&token.to_string()) {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            Json(json!({
-                "error": "invalid API key"
-            })),
-        ));
+        let potential_valid_load_acc = is_valid_api_key(&token).await.map_err(|_| {
+            (StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid load_acc key"})))
+        })?;
+
+        if !potential_valid_load_acc {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(json!({
+                    "error": "invalid API key"
+                })),
+            ));
+        }
     }
 
     let mut file_data: Option<Vec<u8>> = None;

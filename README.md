@@ -15,7 +15,7 @@
 ### Upload data and return an agent public signed DataItem
 ```bash
 echo -n "hello world" | curl -X POST https://load-s3-agent.load.network/upload \
-  -H "Authorization: Bearer REACH_OUT_TO_US" \
+  -H "Authorization: Bearer $load_acc_api_key" \
   -F "file=@-;type=text/plain" \
   -F "content_type=text/plain"
 ```
