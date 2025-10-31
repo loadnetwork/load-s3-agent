@@ -416,7 +416,7 @@ pub async fn handle_get_bucket_registry(
         (StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid Authorization header format"})))
     })?;
 
-    let aws_secret = get_env_var("AWS_SECRET_ACCESS_KEY").map_err(|_| {
+    let aws_secret = get_env_var("REGISTRY_SECRET_KEY").map_err(|_| {
         (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "server configuration error"})))
     })?;
 
