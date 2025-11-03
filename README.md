@@ -8,6 +8,7 @@
 - GET `/` : agent info
 - GET `/stats` : storage stats
 - GET `/:dataitem_id` : generate a presigned get_object URL to access the ANS-104 DataItem data.
+- GET `/tags/query` : query dataitems for a given tags KV pairs.
 - POST `/upload` : post data (or signed dataitem) to store a public offchain DataItem on `~s3@1.0`
 - POST `/upload/private` : post data (or signed dataitem) to store a private offchain DataItem on `~s3@1.0`
 - POST `/post/:dataitem_id` : post an `~s3@1.0` public DataItem to Arweave via Turbo (N.B: Turbo covers any dataitem cost with size <= 100KB).
@@ -31,7 +32,7 @@ echo -n "hello custom tagged world"  | curl -X POST https://load-s3-agent.load.n
 
 ### Upload data and return an agent private signed DataItem
 
-***N.B: any private DataItem does not have the tags indexed nor is queryable ***
+*** N.B: any private DataItem does not have the tags indexed nor is queryable ***
 
 ```bash
 echo -n "hello world" | curl -X POST https://load-s3-agent.load.network/upload/private \
@@ -63,7 +64,7 @@ Tags are extracted from the ANS-104 DataItem, indexed and queryable
 
 ```bash
 curl -X POST https://load-s3-agent.load.network/upload \
-  -H "Authorization: Bearer REACH_OUT_TO_US" \
+  -H "Authorization: Bearer $load_acc_api_key" \
   -H "signed: true" \
   -F "file=@your-signed-dataitem.bin"
 ```
