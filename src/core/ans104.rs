@@ -27,6 +27,7 @@ pub(crate) fn create_dataitem(
         if key_trimmed.is_empty() || value_trimmed.is_empty() {
             continue;
         }
+        // inherts ANS-104 spec tag KV items size limit
         if key_trimmed.len() > 1024 || value_trimmed.len() > 1024 {
             continue;
         }

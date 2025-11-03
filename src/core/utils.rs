@@ -35,6 +35,5 @@ pub(crate) async fn is_valid_api_key(load_acc_token: &str) -> Result<bool, reqwe
     let response = client.get(&url).headers(headers).send().await?;
 
     let result: serde_json::Value = response.json().await?;
-    println!("{}", result["is_active"] == true);
     Ok(result["is_active"] == true)
 }

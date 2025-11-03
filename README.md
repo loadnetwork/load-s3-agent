@@ -20,7 +20,19 @@ echo -n "hello world" | curl -X POST https://load-s3-agent.load.network/upload \
   -F "content_type=text/plain"
 ```
 
+Or optionally add custom tags KVs that will be included in the ANS-104 DataItem construction
+
+```bash
+echo -n "hello custom tagged world"  | curl -X POST https://load-s3-agent.load.network/upload \
+    -H "Authorization: Bearer $load_acc_api_key" \
+    -F "file=@-;type=text/plain" \
+    -F 'tags=[{"key":"tag1","value":"tag1"},{"key":"tag2","value":"tag2"}]'
+```
+
 ### Upload data and return an agent private signed DataItem
+
+***N.B: any private DataItem does not have the tags indexed nor is queryable ***
+
 ```bash
 echo -n "hello world" | curl -X POST https://load-s3-agent.load.network/upload/private \
   -H "Authorization: Bearer $load_acc_api_key" \
@@ -47,6 +59,8 @@ curl -X POST https://load-s3-agent.load.network/upload/private \
 
 ### Upload a signed DataItem and store it in Load S3
 
+Tags are extracted from the ANS-104 DataItem, indexed and queryable
+
 ```bash
 curl -X POST https://load-s3-agent.load.network/upload \
   -H "Authorization: Bearer REACH_OUT_TO_US" \
@@ -63,6 +77,28 @@ curl -X POST \
   "https://load-s3-agent.load.network/post/eoNAO-HlYasHJt3QFDuRrMVdLUxq5B8bXe4N_kboNWs" \
   -H "Authorization: Bearer REACH_OUT_TO_US" \
   -H "Content-Type: application/json"
+```
+
+### Querying DataItems by Tags
+
+all dataitems pushed after agent's `v0.6.0` release are queryable by the dataitem's tags KVs:
+
+```bash
+curl -X POST https://load-s3-agent.load.network/tags/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filters": [
+      {
+        "key": "tag1",
+        "value": "tag1"
+      },
+      {
+        "key": "tag1",
+        "value": "tag1"
+      }
+    ]
+  }'
+
 ```
 
 ## License
