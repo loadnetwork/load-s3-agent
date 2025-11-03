@@ -1,6 +1,7 @@
 use crate::core::server::{
     OBJECT_SIZE_LIMIT, SERVER_PORT, handle_get_bucket_registry, handle_post_dataitem,
-    handle_private_file, handle_route, handle_storage_stats, serve_dataitem, upload_file,
+    handle_private_file, handle_query_tags, handle_route, handle_storage_stats, serve_dataitem,
+    upload_file,
 };
 use axum::{
     Router,
@@ -27,6 +28,7 @@ async fn main() {
         .route("/stats", get(handle_storage_stats))
         .route("/upload", post(upload_file))
         .route("/upload/private", post(handle_private_file))
+        .route("/tags/query", post(handle_query_tags))
         .route("/post/{id}", post(handle_post_dataitem))
         .route("/registry/{bucket_name}", get(handle_get_bucket_registry))
         .route("/{id}", get(serve_dataitem))

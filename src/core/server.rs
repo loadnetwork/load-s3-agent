@@ -1,5 +1,6 @@
 use crate::core::{
     bundler::post_dataitem,
+    metadata::query_dataitems_by_tags,
     registry::get_bucket_registry,
     s3::{
         get_bucket_stats, get_dataitem_url, store_dataitem, store_lcp_priv_bucket_dataitem,
@@ -16,9 +17,34 @@ use axum::{
 };
 use axum_extra::extract::Multipart;
 use headers::HeaderMap;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 pub use crate::core::utils::{OBJECT_SIZE_LIMIT, SERVER_PORT};
+
+#[derive(Deserialize)]
+pub(crate) struct TagFilter {
+    key: String,
+    value: String,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct TagQueryRequest {
+    filters: Vec<TagFilter>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct UploadTag {
+    key: String,
+    value: String,
+}
+
+#[derive(Serialize)]
+pub(crate) struct TagQueryItem {
+    dataitem_id: String,
+    content_type: String,
+    created_at: String,
+}
 
 pub async fn handle_route() -> Json<Value> {
     Json(serde_json::json!({
@@ -40,6 +66,43 @@ pub async fn handle_storage_stats() -> Json<Value> {
         "total_dataitems_count": stats.0,
         "total_dataitems_size": stats.1
     }))
+}
+
+pub async fn handle_query_tags(
+    Json(payload): Json<TagQueryRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    if payload.filters.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "filters array must not be empty"})),
+        ));
+    }
+
+    let filters: Vec<(String, String)> =
+        payload.filters.iter().map(|f| (f.key.clone(), f.value.clone())).collect();
+
+    match query_dataitems_by_tags(&filters).await {
+        Ok(records) => {
+            let items: Vec<TagQueryItem> = records
+                .into_iter()
+                .map(|record| TagQueryItem {
+                    dataitem_id: record.dataitem_id,
+                    content_type: record.content_type,
+                    created_at: record.created_at.to_rfc3339(),
+                })
+                .collect();
+
+            Ok(Json(json!({
+                "success": true,
+                "count": items.len(),
+                "items": items
+            })))
+        }
+        Err(err) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("failed to query tags: {err}")})),
+        )),
+    }
 }
 
 pub async fn serve_dataitem(Path(dataitem_id): Path<String>) -> impl IntoResponse {
@@ -108,6 +171,7 @@ pub async fn upload_file(
 
     let mut file_data: Option<Vec<u8>> = None;
     let mut content_type: Option<String> = None;
+    let mut extra_tags: Vec<UploadTag> = Vec::new();
 
     while let Some(field) = multipart.next_field().await.map_err(|_| {
         (
@@ -149,6 +213,27 @@ pub async fn upload_file(
                     })?);
                 }
             }
+            "tags" => {
+                let text = field.text().await.map_err(|_| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({
+                            "error": "failed to read tags field"
+                        })),
+                    )
+                })?;
+
+                let parsed: Vec<UploadTag> = serde_json::from_str(&text).map_err(|_| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({
+                            "error": "invalid tags payload, expected JSON array of objects with key/value"
+                        })),
+                    )
+                })?;
+
+                extra_tags = parsed;
+            }
             _ => {
                 // skip
             }
@@ -176,16 +261,29 @@ pub async fn upload_file(
     let is_signed =
         headers.get("signed").and_then(|h| h.to_str().ok()).map(|s| s == "true").unwrap_or(false);
 
+    if is_signed && !extra_tags.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": "custom tags are not supported when uploading signed dataitems, the dataitems tags will be extracted and appied instead"
+            })),
+        ));
+    }
+
+    let extra_tag_pairs: Vec<(String, String)> =
+        extra_tags.iter().map(|tag| (tag.key.clone(), tag.value.clone())).collect();
+
     let result = if is_signed {
         store_signed_dataitem(file_bytes).await
     } else {
-        store_dataitem(file_bytes, content_type_str).await
+        store_dataitem(file_bytes, content_type_str, &extra_tag_pairs).await
     };
 
     match result {
         Ok(dataitem_id) => Ok(Json(json!({
             "success": true,
             "dataitem_id": dataitem_id,
+            "custom_tags": extra_tags,
             "message": "file uploaded successfully"
         }))),
         Err(e) => Err((

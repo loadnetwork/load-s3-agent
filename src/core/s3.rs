@@ -1,6 +1,7 @@
 use crate::core::{
     ans104::{create_dataitem, reconstruct_dataitem_data},
     lcp::validate_bucket_ownership,
+    metadata::index_dataitem,
     registry::set_dataitem_name,
     utils::{PRESIGNED_URL_EXPIRY, get_env_var},
 };
@@ -53,10 +54,17 @@ async fn s3_client() -> Result<Client, Error> {
     Ok(Client::from_conf(s3_config))
 }
 
-pub async fn store_dataitem(data: Vec<u8>, content_type: &str) -> Result<String, Error> {
+pub async fn store_dataitem(
+    data: Vec<u8>,
+    content_type: &str,
+    extra_tags: &[(String, String)],
+) -> Result<String, Error> {
     let agent_config = AgentConfig::load();
     let client = s3_client().await?;
-    let dataitem = create_dataitem(data.clone(), content_type)?;
+    let dataitem = create_dataitem(data.clone(), content_type, extra_tags)?;
+    let tags_for_index: Vec<(String, String)> =
+
+        dataitem.tags.iter().map(|tag| (tag.name.clone(), tag.value.clone())).collect();
     let dataitem_id = dataitem.arweave_id();
 
     let key_dataitem: String = format!("{}/{dataitem_id}.ans104", agent_config.s3_dir_name);
@@ -83,14 +91,19 @@ pub async fn store_dataitem(data: Vec<u8>, content_type: &str) -> Result<String,
         .send()
         .await?;
 
+    println!("INDEX DATA: {:?} {:?} {:?}", &dataitem_id, &content_type, &tags_for_index);
+    index_dataitem(&dataitem_id, content_type, &tags_for_index).await.unwrap();
+
     Ok(dataitem_id)
 }
 
 pub async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error> {
     let agent_config = AgentConfig::load();
     let client = s3_client().await?;
-    let dataitem = reconstruct_dataitem_data(data)?;
-    let dataitem_id = dataitem.0.arweave_id();
+    let (dataitem, content_type) = reconstruct_dataitem_data(data)?;
+    let dataitem_id = dataitem.arweave_id();
+    let tags_for_index: Vec<(String, String)> =
+        dataitem.tags.iter().map(|tag| (tag.name.clone(), tag.value.clone())).collect();
 
     let key_dataitem: String = format!("{}/{dataitem_id}.ans104", agent_config.s3_dir_name);
     let key_raw: String = format!("{}/{dataitem_id}", agent_config.s3_raw_dir_name);
@@ -100,7 +113,7 @@ pub async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error> {
         .put_object()
         .bucket(&agent_config.s3_bucket_name)
         .key(key_dataitem)
-        .body(dataitem.0.to_bytes()?.into())
+        .body(dataitem.to_bytes()?.into())
         .content_type("application/octet-stream")
         .send()
         .await?;
@@ -111,10 +124,12 @@ pub async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error> {
         .put_object()
         .bucket(agent_config.s3_bucket_name)
         .key(key_raw)
-        .body(dataitem.0.data.into())
-        .content_type(dataitem.1)
+        .body(dataitem.data.clone().into())
+        .content_type(content_type.clone())
         .send()
         .await?;
+
+    index_dataitem(&dataitem_id, &content_type, &tags_for_index).await?;
 
     Ok(dataitem_id)
 }
@@ -198,7 +213,6 @@ pub async fn store_lcp_priv_bucket_dataitem(
     dataitem_name: &str,
     is_signed: bool,
 ) -> Result<String, Error> {
-    let mut key_dataitem: String = "".to_string();
     if !validate_bucket_ownership(bucket_name, load_acc).await? {
         return Err(anyhow!("invalid load_acc api key"));
     }
@@ -208,16 +222,16 @@ pub async fn store_lcp_priv_bucket_dataitem(
     let dataitem = if is_signed {
         reconstruct_dataitem_data(data)?.0
     } else {
-        create_dataitem(data.clone(), content_type)?
+        create_dataitem(data.clone(), content_type, &[])?
     };
 
     let dataitem_id = dataitem.arweave_id();
 
-    if !folder_name.is_empty() {
-        key_dataitem = format!("{folder_name}/{dataitem_id}.ans104")
+    let key_dataitem = if !folder_name.is_empty() {
+        format!("{folder_name}/{dataitem_id}.ans104")
     } else {
-        key_dataitem = format!("{dataitem_id}.ans104");
-    }
+        format!("{dataitem_id}.ans104")
+    };
 
     // store it as ans-104 serialized dataitem
     client
