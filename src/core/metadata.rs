@@ -33,8 +33,7 @@ struct ClickhouseConfig {
 
 impl ClickhouseConfig {
     fn load() -> Result<Self> {
-        let url = std::env::var("CLICKHOUSE_URL")
-            .context("CLICKHOUSE_URL env var not set")?;
+        let url = std::env::var("CLICKHOUSE_URL").context("CLICKHOUSE_URL env var not set")?;
         let database = std::env::var("CLICKHOUSE_DATABASE").unwrap();
         let user = std::env::var("CLICKHOUSE_USER").ok().filter(|v| !v.is_empty());
         let password = std::env::var("CLICKHOUSE_PASSWORD").ok().filter(|v| !v.is_empty());
@@ -58,8 +57,7 @@ fn client() -> Result<&'static Client> {
 }
 
 fn http_client() -> Result<&'static HttpClient> {
-    HTTP_CLIENT
-        .get_or_try_init(|| HttpClient::builder().build().map_err(|err| anyhow!(err)))
+    HTTP_CLIENT.get_or_try_init(|| HttpClient::builder().build().map_err(|err| anyhow!(err)))
 }
 
 async fn ensure_schema() -> Result<()> {
@@ -147,18 +145,15 @@ pub async fn index_dataitem(
     Ok(())
 }
 
-pub async fn query_dataitems_by_tags(
-    filters: &[(String, String)],
-) -> Result<Vec<DataitemRecord>> {
+pub async fn query_dataitems_by_tags(filters: &[(String, String)]) -> Result<Vec<DataitemRecord>> {
     if filters.is_empty() {
         return Ok(Vec::new());
     }
 
     ensure_schema().await?;
 
-    let normalized_filters = normalize_tags(
-        &filters.iter().map(|(k, v)| (k.clone(), v.clone())).collect::<Vec<_>>(),
-    );
+    let normalized_filters =
+        normalize_tags(&filters.iter().map(|(k, v)| (k.clone(), v.clone())).collect::<Vec<_>>());
     if normalized_filters.is_empty() {
         return Ok(Vec::new());
     }
@@ -169,7 +164,8 @@ pub async fn query_dataitems_by_tags(
         .map(|(k, v)| format!("('{}','{}')", escape_single(k), escape_single(v)))
         .collect::<Vec<_>>()
         .join(", ");
-    // took this sql query string formatting route because the clickhouse lib was acting oddly with the Row binding
+    // took this sql query string formatting route because the clickhouse lib was acting oddly with
+    // the Row binding
     let sql = format!(
         "SELECT dataitem_id,
                 any(content_type) AS content_type,

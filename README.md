@@ -94,8 +94,8 @@ curl -X POST https://load-s3-agent.load.network/tags/query \
         "value": "tag1"
       },
       {
-        "key": "tag1",
-        "value": "tag1"
+        "key": "tag2",
+        "value": "tag2"
       }
     ]
   }'

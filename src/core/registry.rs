@@ -22,7 +22,8 @@ fn get_bucket_file_path(bucket_name: &str) -> Result<PathBuf, Error> {
     let registry_dir = get_env_var("S3_AGENT_REGISTRY_DIR_PATH")?;
 
     // Sanitize bucket name for filesystem
-    let safe_bucket_name = bucket_name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_");
+    let safe_bucket_name =
+        bucket_name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|', '(', ')', '`'], "_");
 
     Ok(Path::new(&registry_dir).join(format!("{safe_bucket_name}.json")))
 }

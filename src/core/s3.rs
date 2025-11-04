@@ -63,7 +63,6 @@ pub async fn store_dataitem(
     let client = s3_client().await?;
     let dataitem = create_dataitem(data.clone(), content_type, extra_tags)?;
     let tags_for_index: Vec<(String, String)> =
-
         dataitem.tags.iter().map(|tag| (tag.name.clone(), tag.value.clone())).collect();
     let dataitem_id = dataitem.arweave_id();
 
@@ -232,6 +231,9 @@ pub async fn store_lcp_priv_bucket_dataitem(
     } else {
         format!("{dataitem_id}.ans104")
     };
+    // sanitize the dataitem name from special chars
+    let dataitem_name =
+        dataitem_name.replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|', '(', ')', '`'], "_");
 
     // store it as ans-104 serialized dataitem
     client
@@ -247,7 +249,7 @@ pub async fn store_lcp_priv_bucket_dataitem(
 
     // register the dataitem name if provided
     if !dataitem_name.is_empty() {
-        set_dataitem_name(bucket_name, &key_dataitem, dataitem_name)?;
+        set_dataitem_name(bucket_name, &key_dataitem, &dataitem_name)?;
     }
 
     Ok(dataitem_id)
