@@ -102,5 +102,25 @@ curl -X POST https://load-s3-agent.load.network/tags/query \
 
 ```
 
+Pagination follows Arweave's GQL schema: optional `first` (default 25, max 100) and a cursor `after`.
+
+```bash
+curl -X POST https://load-s3-agent.load.network/tags/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filters": [
+      {
+        "key": "tag1",
+        "value": "tag1"
+      }
+    ],
+    "first": 25,
+    "after": null
+  }'
+
+```
+
+if `page_info.has_next_page` returns true, reuse the `page_info.next_cursor` string as the next `after`.
+
 ## License
 This agent is licensed under the [MIT License](./LICENSE)

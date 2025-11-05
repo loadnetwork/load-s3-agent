@@ -1,6 +1,12 @@
 use crate::core::{
     bundler::post_dataitem,
-    metadata::query_dataitems_by_tags,
+    metadata::{
+        decode_tag_query_cursor,
+        query_dataitems_by_tags,
+        TagQueryPagination,
+        DEFAULT_PAGE_SIZE,
+        MAX_PAGE_SIZE,
+    },
     registry::get_bucket_registry,
     s3::{
         get_bucket_stats, get_dataitem_url, store_dataitem, store_lcp_priv_bucket_dataitem,
@@ -31,6 +37,10 @@ pub(crate) struct TagFilter {
 #[derive(Deserialize)]
 pub(crate) struct TagQueryRequest {
     filters: Vec<TagFilter>,
+    #[serde(default)]
+    first: Option<usize>,
+    #[serde(default)]
+    after: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -81,9 +91,39 @@ pub async fn handle_query_tags(
     let filters: Vec<(String, String)> =
         payload.filters.iter().map(|f| (f.key.clone(), f.value.clone())).collect();
 
-    match query_dataitems_by_tags(&filters).await {
-        Ok(records) => {
-            let items: Vec<TagQueryItem> = records
+    let requested_first = payload.first.unwrap_or(DEFAULT_PAGE_SIZE);
+    if requested_first == 0 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "first must be greater than 0"})),
+        ));
+    }
+    if requested_first > MAX_PAGE_SIZE {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("first must not exceed {MAX_PAGE_SIZE}")})),
+        ));
+    }
+    let first = requested_first;
+
+    let after_cursor = match payload.after.as_deref() {
+        Some(cursor) => {
+            Some(decode_tag_query_cursor(cursor).map_err(|err| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({"error": format!("invalid cursor: {err}")})),
+                )
+            })?)
+        }
+        None => None,
+    };
+
+    let pagination = TagQueryPagination { first, after: after_cursor };
+
+    match query_dataitems_by_tags(&filters, &pagination).await {
+        Ok(page) => {
+            let items: Vec<TagQueryItem> = page
+                .items
                 .into_iter()
                 .map(|record| TagQueryItem {
                     dataitem_id: record.dataitem_id,
@@ -95,7 +135,11 @@ pub async fn handle_query_tags(
             Ok(Json(json!({
                 "success": true,
                 "count": items.len(),
-                "items": items
+                "items": items,
+                "page_info": {
+                    "has_next_page": page.has_more,
+                    "next_cursor": page.next_cursor
+                }
             })))
         }
         Err(err) => Err((
