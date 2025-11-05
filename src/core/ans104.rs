@@ -4,9 +4,9 @@ use bundles_rs::{
     crypto::arweave::ArweaveSigner,
 };
 
-use crate::core::utils::{DATA_PROTOCOL_NAME, get_env_var};
+use crate::core::utils::{STORAGE_PROVIDER_NAME, get_env_var};
 
-const RESERVED_TAGS: [&str; 2] = ["content-type", "data-protocol"];
+const RESERVED_TAGS: [&str; 2] = ["storage-provider", "agent-version"];
 
 pub(crate) fn create_dataitem(
     data: Vec<u8>,
@@ -15,7 +15,7 @@ pub(crate) fn create_dataitem(
 ) -> Result<DataItem, Error> {
     let jwk = get_env_var("UPLOADER_JWK")?;
     let mut tags =
-        vec![Tag::new("Content-Type", content_type), Tag::new("Data-Protocol", DATA_PROTOCOL_NAME)];
+        vec![Tag::new("Content-Type", content_type), Tag::new("Storage-Provider", STORAGE_PROVIDER_NAME), Tag::new("Agent-Version", format!("agent@{}", env!("CARGO_PKG_VERSION")))];
     let signer = ArweaveSigner::from_jwk_str(&jwk)?;
 
     let mut seen: std::collections::HashSet<String> =
@@ -34,6 +34,14 @@ pub(crate) fn create_dataitem(
         let key_lower = key_trimmed.to_lowercase();
         if RESERVED_TAGS.contains(&key_lower.as_str()) {
             continue;
+        }
+        // the content-type tag is hardcoded at position at index 0
+        // if the user provides the mime type in ANS-104 well-known 'Content-Type' tag
+        // we use it instead of the http's type=$ field name -- precendency: ANS-104 tag > http field mime type
+        // maintaining backward compatibility with versions prior to v0.6.2 (nov 5th 2025)
+        if key_lower == "content-type" {
+            tags.remove(0);
+            tags.push(Tag::new(key_trimmed, value_trimmed));
         }
         if seen.insert(key_lower) {
             tags.push(Tag::new(key_trimmed, value_trimmed));
