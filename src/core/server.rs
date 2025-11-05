@@ -1,11 +1,8 @@
 use crate::core::{
     bundler::post_dataitem,
     metadata::{
-        decode_tag_query_cursor,
+        DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, TagQueryPagination, decode_tag_query_cursor,
         query_dataitems_by_tags,
-        TagQueryPagination,
-        DEFAULT_PAGE_SIZE,
-        MAX_PAGE_SIZE,
     },
     registry::get_bucket_registry,
     s3::{
@@ -107,14 +104,9 @@ pub async fn handle_query_tags(
     let first = requested_first;
 
     let after_cursor = match payload.after.as_deref() {
-        Some(cursor) => {
-            Some(decode_tag_query_cursor(cursor).map_err(|err| {
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({"error": format!("invalid cursor: {err}")})),
-                )
-            })?)
-        }
+        Some(cursor) => Some(decode_tag_query_cursor(cursor).map_err(|err| {
+            (StatusCode::BAD_REQUEST, Json(json!({"error": format!("invalid cursor: {err}")})))
+        })?),
         None => None,
     };
 

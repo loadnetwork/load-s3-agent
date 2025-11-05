@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, anyhow};
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use clickhouse::Client;
 use once_cell::sync::OnceCell;
@@ -268,9 +268,7 @@ pub async fn query_dataitems_by_tags(
     }
 
     let next_cursor = if has_more {
-        out.last()
-            .map(|record| encode_tag_query_cursor(record))
-            .transpose()?
+        out.last().map(|record| encode_tag_query_cursor(record)).transpose()?
     } else {
         None
     };

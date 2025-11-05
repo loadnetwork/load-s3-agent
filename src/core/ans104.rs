@@ -14,8 +14,11 @@ pub(crate) fn create_dataitem(
     extra_tags: &[(String, String)],
 ) -> Result<DataItem, Error> {
     let jwk = get_env_var("UPLOADER_JWK")?;
-    let mut tags =
-        vec![Tag::new("Content-Type", content_type), Tag::new("Storage-Provider", STORAGE_PROVIDER_NAME), Tag::new("Agent-Version", format!("agent@{}", env!("CARGO_PKG_VERSION")))];
+    let mut tags = vec![
+        Tag::new("Content-Type", content_type),
+        Tag::new("Storage-Provider", STORAGE_PROVIDER_NAME),
+        Tag::new("Agent-Version", format!("agent@{}", env!("CARGO_PKG_VERSION"))),
+    ];
     let signer = ArweaveSigner::from_jwk_str(&jwk)?;
 
     let mut seen: std::collections::HashSet<String> =
@@ -37,8 +40,9 @@ pub(crate) fn create_dataitem(
         }
         // the content-type tag is hardcoded at position at index 0
         // if the user provides the mime type in ANS-104 well-known 'Content-Type' tag
-        // we use it instead of the http's type=$ field name -- precendency: ANS-104 tag > http field mime type
-        // maintaining backward compatibility with versions prior to v0.6.2 (nov 5th 2025)
+        // we use it instead of the http's type=$ field name -- precendency: ANS-104 tag > http
+        // field mime type maintaining backward compatibility with versions prior to v0.6.2
+        // (nov 5th 2025)
         if key_lower == "content-type" {
             tags.remove(0);
             tags.push(Tag::new(key_trimmed, value_trimmed));
