@@ -7,7 +7,7 @@
 
 - GET `/` : agent info
 - GET `/stats` : storage stats
-- GET `/:dataitem_id` : generate a presigned get_object URL to access the ANS-104 DataItem data.
+- GET `/:dataitem_id` : generate a presigned get_object URL to access the ANS-104 DataItem data - **DEPRECATED since v0.7.0** - use `gateway.s3-node-1.load.network/resolve/$DATAITEM_ID` instead
 - GET `/tags/query` : query dataitems for a given tags KV pairs.
 - POST `/upload` : post data (or signed dataitem) to store a public offchain DataItem on `~s3@1.0`
 - POST `/upload/private` : post data (or signed dataitem) to store a private offchain DataItem on `~s3@1.0`

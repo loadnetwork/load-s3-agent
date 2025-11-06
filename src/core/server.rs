@@ -68,7 +68,6 @@ pub async fn handle_route() -> Json<Value> {
 
 pub async fn handle_storage_stats() -> Json<Value> {
     let stats = get_bucket_stats().await.unwrap_or_default();
-
     Json(serde_json::json!({
         "total_dataitems_count": stats.0,
         "total_dataitems_size": stats.1
@@ -142,18 +141,11 @@ pub async fn handle_query_tags(
 }
 
 pub async fn serve_dataitem(Path(dataitem_id): Path<String>) -> impl IntoResponse {
-    match get_dataitem_url(&dataitem_id).await {
-        Ok(url) => Response::builder()
-            .status(StatusCode::FOUND)
-            .header("location", url)
-            .body(Body::empty())
-            .unwrap(),
-        Err(e) => Response::builder()
-            .status(StatusCode::NOT_FOUND)
+    Response::builder()
+            .status(StatusCode::FORBIDDEN)
             .header("content-type", "application/json")
-            .body(Body::from(format!(r#"{{"error": "{e}"}}"#)))
-            .unwrap(),
-    }
+            .body(Body::from(format!(r#"{{"error": "method deprecated since v0.7.0 - please access dataitem from 'https://gateway.s3-node-1.load.network/resolve/{dataitem_id}'"}}"#)))
+            .unwrap()
 }
 
 pub async fn upload_file(
